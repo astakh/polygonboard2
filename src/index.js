@@ -218,19 +218,25 @@ async function createPixel(pos, color, url, owner, price) {
     console.log("createPixel: pos=" + p.get('pos'));
 }
 async function getPixels() {
-    let getpix = []
+    //let getpix = []
     const Pixel = Moralis.Object.extend("Pixel");
     const query = new Moralis.Query(Pixel);
     query.greaterThan("pos", 0);
+    query.limit(xs*ys);
     const pixels = await query.find(); 
+    console.log("found " + pixels.length + " pixels");
     for (var i=0; i<pixels.length; i++) {
         let p = pixels[i];
-        getpix.push([parseInt(p.get('pos')), (p.get('pos')-1) % xs, parseInt(p.get('pos') / xs), p.get('colorr'), p.get('url'), p.get('owner'), p.get('price')]);
-        let x = (p.get('pos')-1) % xs;
-        let y = parseInt((p.get('pos')-1-x) / xs);
+        let pos = p.get('pos')-1;
+        let x = pos % xs;
+        let y = parseInt((pos-1-x) / xs);
+        //getpix.push([parseInt(p.get('pos')), (p.get('pos')-1) % xs, parseInt(p.get('pos') / xs), p.get('colorr'), p.get('url'), p.get('owner'), p.get('price')]);
         color[x][y] = p.get('colorr'); 
         url[x][y] = p.get('url');
         price[x][y] = p.get('price');
+        
+        console.log(i + ") pos=" + pos + " x=" + x + " y=" + y + " color=" + color[x][y]);
+        
     }
     return color;
 }
