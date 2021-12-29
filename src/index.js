@@ -3,7 +3,7 @@ const { xorWith, isUndefined } = require('lodash');
 const Moralis  = require('moralis');
 const serverUrl = "https://frgkvs8y2mr0.usemoralis.com:2053/server";
 const appId = "JuMu1VMqwfoI3RGZ6GsiyHBN96Fgg2h7HgtvJZCz";
-const contract = "0xa1B0fFF7C5C5007844a568E2bB1766479Fd72895";
+const contract = "0xb72a0dc05b283d49B0C0E19b16096e9DD647Ae54";
 Moralis.start({ serverUrl, appId });
 const web3 = Moralis.enableWeb3();
 
@@ -17,6 +17,7 @@ var lookmode = true;
 var screenmode = false;  
 var pricecommand = 0;
 var markedcount  = 0;
+var func = "paint40";
 var prevurl = "===";
 var piccoords = document.getElementById("board").getBoundingClientRect();
 var picx = piccoords.left;
@@ -110,9 +111,9 @@ async function getpix(pos) {
         {
             inputs: [
                 {
-                    internalType: "uint24",
+                    internalType: "uint256",
                     name: "_pos",
-                    type: "uint24"
+                    type: "uint256"
                 }
             ],
             name: "getPix",
@@ -126,12 +127,7 @@ async function getpix(pos) {
                         },
                         {
                             internalType: "string",
-                            name: "color",
-                            type: "string"
-                        },
-                        {
-                            internalType: "string",
-                            name: "url",
+                            name: "colorurl",
                             type: "string"
                         },
                         {
@@ -181,11 +177,11 @@ async function updatePixels(poses) {
         let s = JSON.stringify(p);
         s = s.substring( 1, s.length-1);
         s = s.replaceAll('"', '');
-        let pix = s.split(",");
+        let pix = s.split(","); 
         if (parseInt(pix[0])>0) {
             let pixel = await pixelByPos(parseInt(pix[0])); 
-            if (pixel) { changePixel(pixel, pix[1], pix[2], pix[3], parseInt(pix[4])); }
-            else { createPixel(parseInt(pix[0]), pix[1], pix[2], pix[3], parseInt(pix[4])); }
+            if (pixel) { changePixel(pixel, pix[1], pix[2], parseInt(pix[3])); }
+            else { createPixel(parseInt(pix[0]), pix[1], pix[2], parseInt(pix[3])); }
         }
     }
 }
@@ -197,28 +193,25 @@ async function pixelByPos(pos) {
     if (results.length > 0) { return results[0]; }
     else { return false; }
 }
-async function changePixel(pix, color, url, owner, price) {
-    pix.set('colorr', color);
-    pix.set('url', url);
+async function changePixel(pix, colorurl, owner, price) {
+    pix.set('colorurl', colorurl);
     pix.set('owner', owner);
     pix.set('price', price);
     await pix.save();
     console.log("changePixel: pos=" + pix.get('pos'));
 }
-async function createPixel(pos, color, url, owner, price) {
+async function createPixel(pos, colorurl, owner, price) {
     const Pixel = Moralis.Object.extend("Pixel");
     const p = new Pixel();
     console.log(p);
     p.set('pos', pos);
-    p.set('colorr', color);
-    p.set('url', url);
+    p.set('colorurl', colorurl);
     p.set('owner', owner);
     p.set('price', price);
     await p.save();
     console.log("createPixel: pos=" + p.get('pos'));
 }
-async function getPixels() {
-    //let getpix = []
+async function getPixels() { 
     const Pixel = Moralis.Object.extend("Pixel");
     const query = new Moralis.Query(Pixel);
     query.greaterThan("pos", 0);
@@ -229,14 +222,13 @@ async function getPixels() {
         let p = pixels[i];
         let pos = p.get('pos')-1;
         let x = pos % xs;
-        let y = parseInt((pos-1-x) / xs);
-        //getpix.push([parseInt(p.get('pos')), (p.get('pos')-1) % xs, parseInt(p.get('pos') / xs), p.get('colorr'), p.get('url'), p.get('owner'), p.get('price')]);
-        color[x][y] = p.get('colorr'); 
-        url[x][y] = p.get('url');
+        let y = parseInt((pos-x) / xs); 
+        let colorurl = p.get('colorurl');
+        let colorurlarr = colorurl.split("|");
+        color[x][y] = colorurlarr[0]; 
+        url[x][y] = colorurlarr[1];
         price[x][y] = p.get('price');
-        
-        console.log(i + ") pos=" + pos + " x=" + x + " y=" + y + " color=" + color[x][y]);
-        
+        //console.log(i + ") pos=" + pos + " x=" + x + " y=" + y + " color=" + color[x][y]);
     }
     return color;
 }
@@ -259,8 +251,8 @@ document.getElementById("board").addEventListener("click", function (e) {
         let cy = Math.min(Math.max(e.clientY - 5*ps, picy), picy + pich - 10*ps);
         console.log("cursor coords: " + cx + "|" + cy);
         drawCursor(cx, cy);
-        if (cy > 600) {savemenuy = cy - 150; } else {savemenuy = cy + 20; }
-        if (cx > 700) {savemenux = cx - 250; } else {savemenux = cx + 20; }
+        if (cy > (ys*ps - 200)) {savemenuy = cy - 200; } else {savemenuy = cy + 20; }
+        if (cx > (xs*ps - 300)) {savemenux = cx - 300; } else {savemenux = cx + 20; }
         console.log("savemenu coords: " + savemenux + "|" + savemenuy);
         document.getElementById("savemenu").style.left = savemenux + "px";
         document.getElementById("savemenu").style.top  = savemenuy + "px";
@@ -434,49 +426,65 @@ document.getElementById("save").addEventListener("click", async function () {
     lookmode    = false;
     editmode    = false;
     urlcommand  = document.getElementById("url").value; 
+    for (var i=0; i<markedcol.length; i++ ) { markedcol[i] = markedcol[i] + "|" + urlcommand; }
+    if (markedcol.length < 11) {
+        for (var i=markedcol.length; i<11; i++ ) {
+            markedcol.push("");
+            markedpos.push(0);
+        } 
+    } else 
+    if (markedcol.length<41) {
+        for (var i=markedcol.length; i<41; i++ ) {
+            markedcol.push("");
+            markedpos.push(0);
+        } 
+    }
+    if (markedcol.length == 11) { func = "paint10"; } else { func = "paint40"; }
+    console.log("func=" + func);
     hide("cursor"); 
-    console.log("action: save" + markedpos + " " + markedcol );
-    const ABI = [
+    console.log("action: " + func + " with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + markedpos + " " + markedcol );
+    const ABI = [ 
         {
-          constant: true,
-          inputs: [
-			{
-				internalType: "uint24[]",
-				name: "_pos",
-				type: "uint24[]"
-			},
-			{
-				internalType: "string[]",
-				name: "_color",
-				type: "string[]"
-			},
-			{
-				internalType: "string",
-				name: "_url",
-				type: "string"
-			}
-		],
-		name: "paint",
-		outputs: [],
-		stateMutability: "payable",
-		type: "function"
-        }
-    ];
+            inputs: [
+                {
+                    internalType: "uint256[]",
+                    name: "_pos",
+                    type: "uint256[]"
+                },
+                {
+                    internalType: "string[]",
+                    name: "_colorurl",
+                    type: "string[]"
+                }
+            ],
+            name: "paint10",
+            outputs: [],
+            stateMutability: "payable",
+            type: "function"
+        },
+            { inputs: [
+                { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
+                { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
+            name: "paint40", outputs: [], stateMutability: "payable", type: "function"
+            }
+        ];
+    
     const options = {
         contractAddress: contract,
-        functionName: "paint",
+        functionName: func,
         abi: ABI,
         params: {
           _pos: markedpos,
-          _color: markedcol,
-          _url: urlcommand
+          _colorurl: markedcol
         },
         msgValue: parseInt(pricecommand*(100+masterfee)/100),
     };
     try {
+        console.log("metamask confirmation...");
         const paintresult = await Moralis.executeFunction(options);
         console.log(JSON.stringify(paintresult));
-        message("saccessful painting"); 
+        console.log("metamask confirmed");
+        message("successful painting"); 
         await updatePixels(markedpos);
         drawPixels();
     }
