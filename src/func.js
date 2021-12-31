@@ -1,7 +1,7 @@
-function hide(el) {
+export function hide(el) {
     document.getElementById(el).style.visibility = "hidden";
 };
-function show(el) {
+export function show(el) {
     document.getElementById(el).style.visibility = "visible";
 };
 

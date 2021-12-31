@@ -140,6 +140,7 @@
                 <button id="edit" class="button button1">Paint</button>
                 <button id="refresh" class="button button2">Refresh</button>
                 <button id="login" class="button button3">Log in</button> 
+                <button id="loggs" class="button button3">My loggs</button> 
                 <button id="logout" class="button button3">Log out</button> 
                 <div class="box"style="color: aliceblue;">
                     <div id="loginmessage" class="box-message">Log in, please</div>
@@ -156,10 +157,12 @@
                 </div>
             </div>
         </div>
+        <div id="loggdata" style="visibility: hidden; position: fixed; color: rgb(253, 251, 251);"></div>
         <div class="board" style="position: relative;">
             <canvas id="board" width="1" height="1" oncontextmenu="return false;" class="paint-box"></canvas>
             <canvas id="cursor" width="1" height="1" oncontextmenu="return false;" style="position: fixed; visibility: hidden;"></canvas>
         </div>
+        <div id="loggdata"></div>
     </div>
     <script src="dist/main.js"></script>
 

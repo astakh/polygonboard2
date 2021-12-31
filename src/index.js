@@ -3,7 +3,7 @@ const { xorWith, isUndefined } = require('lodash');
 const Moralis  = require('moralis');
 const serverUrl = "https://frgkvs8y2mr0.usemoralis.com:2053/server";
 const appId = "JuMu1VMqwfoI3RGZ6GsiyHBN96Fgg2h7HgtvJZCz";
-const contract = "0xb72a0dc05b283d49B0C0E19b16096e9DD647Ae54";
+const contract = "0xc3F1e16910d750F7F1aF2152dcaCfC33057b8210";
 Moralis.start({ serverUrl, appId });
 const web3 = Moralis.enableWeb3();
 
@@ -31,7 +31,7 @@ var markedcol = []
 // params###########################
 var xs = 765;
 var ys = 340;
-var initprice = 100;
+var initprice = 1000000000000000;
 var masterfee = 1;
 var maxpixcount = 40;
 var ps = 2;
@@ -41,33 +41,32 @@ var crsx = 0;
 var crsy = 0;
 var cursortaken = false;
 var color  = new Array(xs)
+var owner  = new Array(xs)
 var url  = new Array(xs)
 var price= new Array(xs);
 for(var x = 0; x < xs; x++)  {
     color[x]  = new Array(ys);
     url[x]  = new Array(ys);
+    owner[x]  = new Array(ys);
     price[x]= new Array(ys);
     for (var y = 0; y < ys; y++) {
         color[x][y] = "black";
         url[x][y] = "";
+        owner[x][y] = "";
         price[x][y] = initprice;
     }
 }
-function hide(el) {
-    document.getElementById(el).style.visibility = "hidden";
-};
-function show(el) {
-    document.getElementById(el).style.visibility = "visible";
-};
-function message(m) {
-    document.getElementById("message").innerHTML = m;
-}
+function hide(el) { document.getElementById(el).style.visibility = "hidden"; };
+function show(el) { document.getElementById(el).style.visibility = "visible"; };
+function message(m) { document.getElementById("message").innerHTML = m; }
 function topaintmode() {
     editmode     = true; 
     lookmode     = false;
-    hide("edit");
-    hide("refresh");
+    hide("edit"); 
     hide("cursor");
+    show("board");
+    hide("loggdata");
+    hide("loggs");
 }
 function tolookmode() {
     editmode    = false; 
@@ -75,8 +74,23 @@ function tolookmode() {
     lookmode    = true;
     show("edit");
     show("refresh");
+    show("logout");
     hide("savemenu");
     hide("cursor");
+    hide("loggdata");
+    show("board");
+    show("loggs");
+}
+function tologgmode() {
+    editmode    = false; 
+    screenmode  = false;
+    lookmode    = false;
+    hide("edit");
+    show("refresh");
+    hide("savemenu");
+    hide("cursor");
+    hide("board");
+    show("loggdata");
 }
 function getpiccoords() {
     piccoords = document.getElementById("board").getBoundingClientRect();
@@ -87,8 +101,7 @@ function getpiccoords() {
 }
 async function login() {
     //const web3 = await Moralis.enableWeb3();
-    user = Moralis.User.current();
-    //console.log("user=" + user.get("ethAddress"));
+    user = Moralis.User.current(); 
     if (!user) {
         user = await Moralis.authenticate({ signingMessage: "Log in to theBoard" })
         .then(function (user) {
@@ -105,51 +118,33 @@ async function logOut() {
 }
 document.getElementById("login").onclick = login;
 document.getElementById("logout").onclick = logOut;
-
+document.getElementById("loggs").addEventListener("click", async function() {
+    user = Moralis.User.current();
+    console.log("loggs for user " + user.get("ethAddress"));
+    let loggs = await getLoggs(user.get("ethAddress"));
+    let cont  = "Your transactions:<br><br>";
+    for (var i=0; i<loggs.length; i++) {
+        cont += i + ') <a href="https://testnet.bscscan.com/tx/' + loggs[i][1] + '">trx</a> ' + loggs[i][0];
+        if (loggs[i][3] > 0) { cont += " pos:" + loggs[i][2] + " bought:-" + toBNB(loggs[i][3]); }
+        if (loggs[i][4] > 0) { cont += " pos:" + loggs[i][2] + " sold: " + toBNB(loggs[i][4]); }
+        cont += "<br>";
+    }
+    tologgmode();
+    document.getElementById("loggdata").innerHTML = cont;
+})
 async function getpix(pos) {
     const ABI = [
-        {
-            inputs: [
-                {
-                    internalType: "uint256",
-                    name: "_pos",
-                    type: "uint256"
-                }
-            ],
+        {   inputs: [ { internalType: "uint256", name: "_pos", type: "uint256" } ],
             name: "getPix",
-            outputs: [
-                {
-                    components: [
-                        {
-                            "internalType": "uint256",
-                            "name": "pos",
-                            "type": "uint256"
-                        },
-                        {
-                            internalType: "string",
-                            name: "colorurl",
-                            type: "string"
-                        },
-                        {
-                            internalType: "address",
-                            name: "owner",
-                            type: "address"
-                        },
-                        {
-                            internalType: "uint256",
-                            name: "price",
-                            type: "uint256"
-                        }
-                    ],
-                    internalType: "struct theboard.Pix",
-                    name: "",
-                    type: "tuple"
-                }
-            ],
-            stateMutability: "view",
-            type: "function"
-        }
-    ];
+            outputs: [ {    components: [
+                            { internalType: "uint256", name: "pos", type: "uint256" },
+                            { internalType: "string",  name: "colorurl", type: "string" },
+                            { internalType: "address", name: "owner", type: "address" },
+                            { internalType: "uint256", name: "price", type: "uint256" } ],
+                            internalType: "struct theboard.Pix",
+                            name: "",
+                            type: "tuple" } ],
+            stateMutability: "view", type: "function" } ];
     const options = {
         contractAddress: contract,
         functionName: "getPix",
@@ -160,10 +155,9 @@ async function getpix(pos) {
     };
     const web3 = await Moralis.enableWeb3();
     try {
-    const pixdata = await Moralis.executeFunction(options);
-    //console.log(JSON.stringify(pixdata));
-    //document.getElementById("result").innerHTML = pixdata;
-    return pixdata;
+        const pixdata = await Moralis.executeFunction(options); 
+        //document.getElementById("result").innerHTML = pixdata;
+        return pixdata;
     }
     catch (e) { 
         document.getElementById("result").innerHTML = "failed to get pixdata";
@@ -195,7 +189,7 @@ async function pixelByPos(pos) {
 }
 async function changePixel(pix, colorurl, owner, price) {
     pix.set('colorurl', colorurl);
-    pix.set('owner', owner);
+    pix.set('owner', owner.toLowerCase());
     pix.set('price', price);
     await pix.save();
     console.log("changePixel: pos=" + pix.get('pos'));
@@ -206,10 +200,51 @@ async function createPixel(pos, colorurl, owner, price) {
     console.log(p);
     p.set('pos', pos);
     p.set('colorurl', colorurl);
-    p.set('owner', owner);
+    p.set('owner', owner.toLowerCase());
     p.set('price', price);
     await p.save();
     console.log("createPixel: pos=" + p.get('pos'));
+}
+async function createLoggs(pos, trx) {
+    if (pos>0) {
+        user = Moralis.User.current();
+        const Loggs = Moralis.Object.extend("loggs");
+        const p = new Loggs(); 
+        let x = (pos-1) % xs;
+        let y = parseInt((pos-1-x) / xs); 
+        console.log("createLoggs for pixel pos:" + pos + " price:" + price[x][y] + " owner:" + owner[x][y]);
+        p.set('address', user.get("ethAddress"));
+        p.set('trx', trx);
+        p.set('bought', price[x][y]);
+        p.set('sold', 0);
+        p.set('pos', pos);
+        await p.save();
+        console.log("createLoggs: for:" + user.get("ethAddress") + " pos:" + p.get('pos') + " cost:" + p.get('bought'));
+        const p2 = new Loggs();
+        if (owner[x][y] != '') {
+            p2.set('address', owner[x][y]);
+            p2.set('trx', trx);
+            p2.set('bought', 0);
+            p2.set('sold', price[x][y]);
+            p2.set('pos', pos);
+            await p2.save();
+            console.log("createLoggs: for:" + owner[x][y] + " pos:" + p2.get('pos') + " revenue:" + p2.get('sold'));
+        }
+    }
+}
+async function getLoggs(adr) { 
+    const Loggs = Moralis.Object.extend("loggs");
+    const query = new Moralis.Query(Loggs);
+    query.equalTo("address", adr);
+    query.limit(1000);
+    const loggs = await query.find(); 
+    console.log("found " + loggs.length + " loggs");
+    let logdata = [];
+    for (var i=0; i<loggs.length; i++) {
+        let p = loggs[i];
+        logdata.push([p.get('createdAt'), p.get('trx'), p.get('pos'), p.get('bought'), p.get('sold')]);
+    }
+    return logdata;
 }
 async function getPixels() { 
     const Pixel = Moralis.Object.extend("Pixel");
@@ -227,6 +262,7 @@ async function getPixels() {
         let colorurlarr = colorurl.split("|");
         color[x][y] = colorurlarr[0]; 
         url[x][y] = colorurlarr[1];
+        owner[x][y] = p.get('owner');
         price[x][y] = p.get('price');
         //console.log(i + ") pos=" + pos + " x=" + x + " y=" + y + " color=" + color[x][y]);
     }
@@ -288,7 +324,6 @@ document.getElementById("board").addEventListener("mousemove", function (e) {
         else { message("https://" + url[px][py]); }
     }
 })
-
 function drawCursor(x, y) {
     crsx = parseInt((x - picx)/ps); // pixel coords
     crsy = parseInt((y - picy)/ps);
@@ -301,7 +336,6 @@ function drawCursor(x, y) {
         show("cursor");
     }
 }
-
 document.getElementById("cursor").addEventListener("dblclick", function() {
     console.log("cursor click");
     screenmode = true;
@@ -351,7 +385,6 @@ document.getElementById("cursor").addEventListener("mousemove", function(e) {
         drawCursor(cx, cy);
     }
 })
-
 document.getElementById("cursor").addEventListener("dblclick", function() {
     console.log("cursor dblclick");
     screenmode = true;
@@ -363,7 +396,6 @@ document.getElementById("cursor").addEventListener("dblclick", function() {
     drawScreen();
     getpiccoords();
 })
-
 document.getElementById("screen").addEventListener("click", function(e) { 
     let scrcoords = document.getElementById("screen").getBoundingClientRect();
     let px = parseInt((e.clientX - scrcoords.left)/screenwidth);
@@ -411,71 +443,57 @@ function toBNB(b) {
     else {
         s = '0'.repeat(19-s.length) + s;
         s = s.substring(0, s.length-18) + "." + s.substring(s.length-18); }
-    return 'BNB' + s;
+    let nn = parseFloat(s);
+    return nn.toString() + 'BNB';
 }
 document.getElementById("color").addEventListener("change", function() {
     if (screenmode) {
     screencolor = document.getElementById("color").value;
     drawScreen(); }
 })
- 
 document.getElementById("closescreen").addEventListener("click", function() { tolookmode(); })
 // save##################################################################################################
 document.getElementById("save").addEventListener("click", async function () {
     hide("savemenu");
+    hide("logout");
     lookmode    = false;
     editmode    = false;
     urlcommand  = document.getElementById("url").value; 
     for (var i=0; i<markedcol.length; i++ ) { markedcol[i] = markedcol[i] + "|" + urlcommand; }
-    if (markedcol.length < 11) {
-        for (var i=markedcol.length; i<11; i++ ) {
-            markedcol.push("");
-            markedpos.push(0);
+    let postogo = markedpos;
+    let coltogo = markedcol;
+    if (coltogo.length < 11) {
+        for (var i=coltogo.length; i<11; i++ ) {
+            coltogo.push("");
+            postogo.push(0);
         } 
     } else 
-    if (markedcol.length<41) {
-        for (var i=markedcol.length; i<41; i++ ) {
-            markedcol.push("");
-            markedpos.push(0);
+    if (coltogo.length<41) {
+        for (var i=coltogo.length; i<41; i++ ) {
+            coltogo.push("");
+            postogo.push(0);
         } 
     }
-    if (markedcol.length == 11) { func = "paint10"; } else { func = "paint40"; }
-    console.log("func=" + func);
+    if (coltogo.length == 11) { func = "paint10"; } else { func = "paint40"; }
     hide("cursor"); 
-    console.log("action: " + func + " with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + markedpos + " " + markedcol );
+    console.log("action: " + func + " with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + postogo + " " + coltogo );
     const ABI = [ 
-        {
-            inputs: [
-                {
-                    internalType: "uint256[]",
-                    name: "_pos",
-                    type: "uint256[]"
-                },
-                {
-                    internalType: "string[]",
-                    name: "_colorurl",
-                    type: "string[]"
-                }
-            ],
-            name: "paint10",
-            outputs: [],
-            stateMutability: "payable",
-            type: "function"
-        },
+        {   inputs: [
+                { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
+                { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
+            name: "paint10", outputs: [], stateMutability: "payable", type: "function" },
             { inputs: [
                 { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
                 { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
-            name: "paint40", outputs: [], stateMutability: "payable", type: "function"
-            }
-        ];
+            name: "paint40", outputs: [], stateMutability: "payable", type: "function" } ];
     
     const options = {
         contractAddress: contract,
         functionName: func,
         abi: ABI,
         params: {
-          _pos: markedpos,
-          _colorurl: markedcol
+          _pos: postogo,
+          _colorurl: coltogo
         },
         msgValue: parseInt(pricecommand*(100+masterfee)/100),
     };
@@ -483,8 +501,9 @@ document.getElementById("save").addEventListener("click", async function () {
         console.log("metamask confirmation...");
         const paintresult = await Moralis.executeFunction(options);
         console.log(JSON.stringify(paintresult));
-        console.log("metamask confirmed");
+        console.log("metamask confirmed transactionHash: " + paintresult['transactionHash']);
         message("successful painting"); 
+        for (var i=0; i<markedpos.length; i++ ) { await createLoggs(markedpos[i], paintresult['transactionHash']); }
         await updatePixels(markedpos);
         drawPixels();
     }
@@ -496,12 +515,11 @@ document.getElementById("save").addEventListener("click", async function () {
 });
 // refresh
 document.getElementById("refresh").addEventListener("click", function(e){
-    if (lookmode) {
-        console.log("refreshed");
-        drawPixels();
-        getpiccoords();
-        message("look mode: refreshed");
-    }
+    console.log("refreshed");
+    tolookmode();
+    drawPixels();
+    getpiccoords();
+    message("look mode: refreshed");
 })
 
 async function toLoggedIn() {
@@ -510,12 +528,14 @@ async function toLoggedIn() {
     user = await Moralis.User.current();
     document.getElementById("loginmessage").innerHTML = user.get("ethAddress");
     show("logout");
+    show("loggs");
 }
 function toLoggedOut() {
     console.log("loggedOut mode");
     show("login");
     document.getElementById("loginmessage").innerHTML = "not logged in";
     hide("logout");
+    hide("loggs");
 }
 async function loggerIn () {    
     user = await Moralis.User.current();
