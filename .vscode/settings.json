@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/79fc6603-60da-4bf3-a1af-294cfdce006c/resourceGroups/bscboard/providers/Microsoft.Web/sites/bscboard2",
+    "appService.deploySubpath": "."
+}
