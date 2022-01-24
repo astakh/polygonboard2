@@ -1,36 +1,38 @@
 /* Moralis init code */
 const { xorWith, isUndefined } = require('lodash');
-const Moralis  = require('moralis');
+Moralis  = require('moralis');
 const serverUrl = "https://frgkvs8y2mr0.usemoralis.com:2053/server";
 const appId = "JuMu1VMqwfoI3RGZ6GsiyHBN96Fgg2h7HgtvJZCz";
 const contract = "0xc3F1e16910d750F7F1aF2152dcaCfC33057b8210";
 Moralis.start({ serverUrl, appId });
 const web3 = Moralis.enableWeb3();
+import { show, hide, xp, yp, message, topaintmode, tolookmode, tologgmode, toBNB, toBNB3, toLoggedOut, getBoardCoords } from './func';
 
 var user;
 var canvas = document.getElementById("board")
 var cursor = document.getElementById("cursor")
 var screen = document.getElementById("screen")
 var scrpix = new Array(10);
-var editmode = false;
-var lookmode = true;
-var screenmode = false;  
-var pricecommand = 0;
+global.editmode = false;
+global.lookmode = true;
+global.screenmode = false;  
+var pricecommand = 0; 
+var urlcommand   = '';
 var markedcount  = 0;
 var func = "paint40";
-var prevurl = "===";
-var piccoords = document.getElementById("board").getBoundingClientRect();
-var picx = piccoords.left;
-var picy = piccoords.top; 
-var picw = piccoords.width;
-var pich = piccoords.height; 
+var prevurl = "==="; 
+global.picx = 0;
+global.picy = 0; 
+global.picw = 0;
+global.pich = 0; 
+global.brd = [];
 var savemenux = 0;
 var savemenuy = 0;
 var markedpos = []
 var markedcol = []
 // params###########################
-var xs = 765;
-var ys = 340;
+global.xs = 765;
+global.ys = 340;
 var initprice = 1000000000000000;
 var masterfee = 1;
 var maxpixcount = 40;
@@ -56,49 +58,14 @@ for(var x = 0; x < xs; x++)  {
         price[x][y] = initprice;
     }
 }
-function hide(el) { document.getElementById(el).style.visibility = "hidden"; };
-function show(el) { document.getElementById(el).style.visibility = "visible"; };
-function message(m) { document.getElementById("message").innerHTML = m; }
-function topaintmode() {
-    editmode     = true; 
-    lookmode     = false;
-    hide("edit"); 
-    hide("cursor");
-    show("board");
-    hide("loggdata");
-    hide("loggs");
-}
-function tolookmode() {
-    editmode    = false; 
-    screenmode  = false;
-    lookmode    = true;
-    show("edit");
-    show("refresh");
+async function toLoggedIn() {
+    console.log("loggedIn mode");
+    hide("login");
+    user = await Moralis.User.current();
+    document.getElementById("loginmessage").innerHTML = user.get("ethAddress");
     show("logout");
-    hide("savemenu");
-    hide("cursor");
-    hide("loggdata");
-    show("board");
     show("loggs");
-}
-function tologgmode() {
-    editmode    = false; 
-    screenmode  = false;
-    lookmode    = false;
-    hide("edit");
-    show("refresh");
-    hide("savemenu");
-    hide("cursor");
-    hide("board");
-    show("loggdata");
-}
-function getpiccoords() {
-    piccoords = document.getElementById("board").getBoundingClientRect();
-    picx = piccoords.left;
-    picy = piccoords.top; 
-    picw = piccoords.width;
-    pich = piccoords.height; 
-}
+} 
 async function login() {
     //const web3 = await Moralis.enableWeb3();
     user = Moralis.User.current(); 
@@ -122,13 +89,18 @@ document.getElementById("loggs").addEventListener("click", async function() {
     user = Moralis.User.current();
     console.log("loggs for user " + user.get("ethAddress"));
     let loggs = await getLoggs(user.get("ethAddress"));
-    let cont  = "Your transactions:<br><br>";
+    let cont  = "Your transactions:<br><br><table>";
+    cont += '<tr align=center><td>transaction</td><td>time</td><td>pixel position</td><td >-/+ BNB</td></tr>';
     for (var i=0; i<loggs.length; i++) {
-        cont += i + ') <a href="https://testnet.bscscan.com/tx/' + loggs[i][1] + '">trx</a> ' + loggs[i][0];
-        if (loggs[i][3] > 0) { cont += " pos:" + loggs[i][2] + " bought:-" + toBNB(loggs[i][3]); }
-        if (loggs[i][4] > 0) { cont += " pos:" + loggs[i][2] + " sold: " + toBNB(loggs[i][4]); }
-        cont += "<br>";
+        cont += '<tr><td><a href="https://testnet.bscscan.com/tx/' + loggs[i][1] + '">trx</a></td>';
+        let date = loggs[i][0];
+        cont += '<td>' + date.toUTCString() + '</td>';
+        cont += '<td align=center>' + xp(loggs[i][2]) + "|" + yp(loggs[i][2]) + '</td>';
+        if (loggs[i][3] > 0) { cont += "<td align=right>-" + toBNB3(loggs[i][3]) + "</td>"; } 
+        if (loggs[i][4] > 0) { cont += "<td align=right>" + toBNB3(loggs[i][4]) + "</td>"; } 
+        cont += "</tr>";
     }
+    cont += "</table>"
     tologgmode();
     document.getElementById("loggdata").innerHTML = cont;
 })
@@ -269,8 +241,8 @@ async function getPixels() {
     return color;
 }
 // отрисовка картинки
-async function drawPixels() {
-    //console.log("in drawpix 0/0 = " + pix[0][0]);
+async function drawBoard() {
+    console.log("drawBoard");
     color = await getPixels();
     for(var x = 0; x < xs; x++) {
         for(var y = 0; y < ys; y++) {
@@ -282,7 +254,7 @@ async function drawPixels() {
 }
 document.getElementById("board").addEventListener("click", function (e) {
     if (editmode && !screenmode) {
-        getpiccoords();
+        getBoardCoords();
         let cx = Math.min(Math.max(e.clientX - 5*ps, picx), picx + picw - 10*ps);
         let cy = Math.min(Math.max(e.clientY - 5*ps, picy), picy + pich - 10*ps);
         console.log("cursor coords: " + cx + "|" + cy);
@@ -347,7 +319,7 @@ document.getElementById("cursor").addEventListener("dblclick", function() {
         }
     }
     drawScreen();
-    getpiccoords();
+    getBoardCoords();
 })
 function drawScreen() {
     if (editmode) {
@@ -365,11 +337,10 @@ function drawScreen() {
 }
 document.getElementById("edit").addEventListener("click", function (e) {
     if (lookmode){
-        topaintmode();
-        paintcommand = "";
+        topaintmode(); 
         pricecommand = 0;    
         markedcount  = 0;
-        getpiccoords();
+        getBoardCoords();
     }
     message("edit mode: click on board to choose segment for painting");
     console.log("edit mode=" + editmode + ", markedcount=" + markedcount);
@@ -378,7 +349,7 @@ document.getElementById("cursor").addEventListener("mousedown", function() { cur
 document.getElementById("cursor").addEventListener("mouseup", function() { cursortaken = false })
 document.getElementById("cursor").addEventListener("mousemove", function(e) { 
     if (cursortaken) {
-        getpiccoords();
+        getBoardCoords();
         let cx = Math.min(Math.max(e.clientX - 5*ps, picx), picx + picw - 10*ps);
         let cy = Math.min(Math.max(e.clientY - 5*ps, picy), picy + pich - 10*ps);
         console.log("cursor coords: " + cx + "|" + cy);
@@ -394,7 +365,7 @@ document.getElementById("cursor").addEventListener("dblclick", function() {
         for (var j=0; j<10; j++) { scrpix[i][j] = ''; }
     }
     drawScreen();
-    getpiccoords();
+    getBoardCoords();
 })
 document.getElementById("screen").addEventListener("click", function(e) { 
     let scrcoords = document.getElementById("screen").getBoundingClientRect();
@@ -437,20 +408,8 @@ document.getElementById("screen").addEventListener("click", function(e) {
     }
     else { message("max " + (maxpixcount) + " pixels per painting"); }
 })
-function toBNB(b) {
-    let s = String(b);
-    if (s.length > 18) { s = s.substring(0, s.length-18) + "." + s.substring(s.length-18); }
-    else {
-        s = '0'.repeat(19-s.length) + s;
-        s = s.substring(0, s.length-18) + "." + s.substring(s.length-18); }
-    let nn = parseFloat(s);
-    return nn.toString() + 'BNB';
-}
-document.getElementById("color").addEventListener("change", function() {
-    if (screenmode) {
-    screencolor = document.getElementById("color").value;
-    drawScreen(); }
-})
+
+document.getElementById("color").addEventListener("change", function() { screencolor = document.getElementById("color").value; })
 document.getElementById("closescreen").addEventListener("click", function() { tolookmode(); })
 // save##################################################################################################
 document.getElementById("save").addEventListener("click", async function () {
@@ -505,7 +464,8 @@ document.getElementById("save").addEventListener("click", async function () {
         message("successful painting"); 
         for (var i=0; i<markedpos.length; i++ ) { await createLoggs(markedpos[i], paintresult['transactionHash']); }
         await updatePixels(markedpos);
-        drawPixels();
+        drawBoard();
+        loggerIn();
     }
     catch (e) { 
         message("failed painting");
@@ -513,30 +473,15 @@ document.getElementById("save").addEventListener("click", async function () {
     }
     tolookmode();
 });
-// refresh
-document.getElementById("refresh").addEventListener("click", function(e){
-    console.log("refreshed");
+function refresh() {
+    console.log("refreshed"); 
     tolookmode();
-    drawPixels();
-    getpiccoords();
-    message("look mode: refreshed");
-})
+    drawBoard();
+    getBoardCoords();
+    message("look mode: refreshed");    
+}
+document.getElementById("refresh").onclick = refresh;
 
-async function toLoggedIn() {
-    console.log("loggedIn mode");
-    hide("login");
-    user = await Moralis.User.current();
-    document.getElementById("loginmessage").innerHTML = user.get("ethAddress");
-    show("logout");
-    show("loggs");
-}
-function toLoggedOut() {
-    console.log("loggedOut mode");
-    show("login");
-    document.getElementById("loginmessage").innerHTML = "not logged in";
-    hide("logout");
-    hide("loggs");
-}
 async function loggerIn () {    
     user = await Moralis.User.current();
     //console.log("user=" + user.get("ethAddress"));
@@ -554,14 +499,14 @@ if(canvas.getContext){
 
     //document.body.style.overflow = 'hidden';
 
-    getpiccoords();
+    getBoardCoords();
  
     var ctx = canvas.getContext("2d")
     var crs = cursor.getContext("2d")
     var scr = screen.getContext("2d")
 
     drawCursor(); 
-    drawPixels(); 
+    drawBoard(); 
 
     loggerIn();
 
