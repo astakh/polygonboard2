@@ -1,11 +1,16 @@
 /* Moralis init code */
 const { xorWith, isUndefined } = require('lodash');
 Moralis  = require('moralis');
-const serverUrl = "https://frgkvs8y2mr0.usemoralis.com:2053/server";
-const appId = "JuMu1VMqwfoI3RGZ6GsiyHBN96Fgg2h7HgtvJZCz";
-const contract = "0xc3F1e16910d750F7F1aF2152dcaCfC33057b8210";
+const serverUrl = "https://0w0fx6waqkft.usemoralis.com:2053/server";
+const appId = "MfaZqRdXSilshHQj4BgcXjZHKiLx8FOIwPPDpG8I";
+const contract = "0x5d597373FDDc323Ff49a4934FE3961A8946964D2";
+const token = "0x7f79c7AdE959107362Dbb60a4D4c4cFd3A437d3b";
+const tokenName = "BRD";
+const coinName = "MATIC";
+
 Moralis.start({ serverUrl, appId });
 const web3 = Moralis.enableWeb3();
+import Moralis from 'moralis';
 import { show, hide, xp, yp, message, topaintmode, tolookmode, tologgmode, toBNB, toBNB3, toLoggedOut, getBoardCoords } from './func';
 
 var user;
@@ -19,7 +24,7 @@ global.screenmode = false;
 var pricecommand = 0; 
 var urlcommand   = '';
 var markedcount  = 0;
-var func = "paint40";
+var func = "";
 var prevurl = "==="; 
 global.picx = 0;
 global.picy = 0; 
@@ -33,9 +38,9 @@ var markedcol = []
 // params###########################
 global.xs = 765;
 global.ys = 340;
-var initprice = 1000000000000000;
+var initprice = 10000000000000000;
 var masterfee = 1;
-var maxpixcount = 40;
+var maxpixcount = 100;
 var ps = 2;
 var screencolor = "red"; 
 var screenwidth = 10;
@@ -92,7 +97,7 @@ document.getElementById("loggs").addEventListener("click", async function() {
     let cont  = "Your transactions:<br><br><table>";
     cont += '<tr align=center><td>transaction</td><td>time</td><td>pixel position</td><td >-/+ BNB</td></tr>';
     for (var i=0; i<loggs.length; i++) {
-        cont += '<tr><td><a href="https://testnet.bscscan.com/tx/' + loggs[i][1] + '">trx</a></td>';
+        cont += '<tr><td><a href="https://mumbai.polygonscan.com/tx/' + loggs[i][1] + '">trx</a></td>';
         let date = loggs[i][0];
         cont += '<td>' + date.toUTCString() + '</td>';
         cont += '<td align=center>' + xp(loggs[i][2]) + "|" + yp(loggs[i][2]) + '</td>';
@@ -411,48 +416,124 @@ document.getElementById("screen").addEventListener("click", function(e) {
 
 document.getElementById("color").addEventListener("change", function() { screencolor = document.getElementById("color").value; })
 document.getElementById("closescreen").addEventListener("click", function() { tolookmode(); })
+
+async function userApproved() {
+    console.log("(userApproved) function:");
+    user = Moralis.User.current();
+    const someuser = Moralis.Object.extend("User"); 
+    const query = new Moralis.Query(someuser);
+    query.equalTo("ethAddress", user.get("ethAddress"));
+    query.limit(1);
+    const ouruser = await query.find();    
+    console.log("user: " + user.get("ethAddress") + "; amount approved: " + user.get("approved")); 
+    return parseInt(ouruser[0].get("approved"));
+}
 // save##################################################################################################
-document.getElementById("save").addEventListener("click", async function () {
+document.getElementById("saveToken").addEventListener("click", async function () {
+    console.log("(saveToken) function:");
     hide("savemenu");
     hide("logout");
+    hide("cursor"); 
     lookmode    = false;
     editmode    = false;
     urlcommand  = document.getElementById("url").value; 
-    for (var i=0; i<markedcol.length; i++ ) { markedcol[i] = markedcol[i] + "|" + urlcommand; }
-    let postogo = markedpos;
-    let coltogo = markedcol;
-    if (coltogo.length < 11) {
-        for (var i=coltogo.length; i<11; i++ ) {
-            coltogo.push("");
-            postogo.push(0);
-        } 
-    } else 
-    if (coltogo.length<41) {
-        for (var i=coltogo.length; i<41; i++ ) {
-            coltogo.push("");
-            postogo.push(0);
-        } 
+    for (var i=0; i<markedcol.length; i++ ) { markedcol[i] = markedcol[i] + "|" + urlcommand; }  
+    console.log("action: saveToken with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + markedpos + " " + markedcol );
+    let approvedAmount = await userApproved();
+    if (approvedAmount == 0) { 
+        console.log("amount is not approved"); 
+        const ABIa = [ {    inputs:[{ internalType: "address", name: "spender", type: "address" },
+                                    { internalType: "uint256", name: "amount", type: "uint256" } ],
+                            name: "approve",
+                            outputs: [ { internalType: "bool", name: "", type: "bool" } ],
+                            stateMutability: "nonpayable", type: "function" } ];
+        
+        const optionsa = {
+            contractAddress: token,
+            functionName: "approve",
+            abi: ABIa,
+            params: { spender: contract, amount: "5000000000000000000000" },
+            msgValue: 0,
+        };    
+        try {
+            console.log("metamask approve...");
+            const approveResult = await Moralis.executeFunction(optionsa);
+            console.log(JSON.stringify(approveResult));
+            console.log("metamask approved transactionHash: " + approveResult['transactionHash']);
+            let amuser = Moralis.Object.extend("User");
+            let query = new Moralis.Query(amuser);
+            query.equalTo("ethAddress", user.get("ethAddress"));
+            query.limit(1);
+            let usersToChange = await query.find();    
+            let userToChange = usersToChange[0];
+            userToChange.set("approved", 5000000000000000000000);  
+            await userToChange.save();
+        }
+        catch (e) { 
+            message("failed to approve");
+            console.log(e);
+        }    
     }
-    if (coltogo.length == 11) { func = "paint10"; } else { func = "paint40"; }
+    approvedAmount = await userApproved(); 
+    if (approvedAmount > 0) {
+        const ABI = [ 
+            {   inputs: [
+                    { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
+                    { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
+                name: "paintToken", outputs: [], stateMutability: "payable", type: "function" } ];
+        
+        const options = {
+            contractAddress: contract,
+            functionName: "paintToken",
+            abi: ABI,
+            params: {
+            _pos: markedpos,
+            _colorurl: markedcol
+            },
+            msgValue: 0,
+        };
+        try {
+            console.log("metamask confirmation...");
+            const paintresult = await Moralis.executeFunction(options);
+            console.log(JSON.stringify(paintresult));
+            console.log("metamask confirmed transactionHash: " + paintresult['transactionHash']);
+            message("successful painting"); 
+            //for (var i=0; i<markedpos.length; i++ ) { await createLoggs(markedpos[i], paintresult['transactionHash']); }
+            //await updatePixels(markedpos);
+            drawBoard();
+            loggerIn();
+        }
+        catch (e) { 
+            message("failed painting");
+            console.log(e);
+        }
+        tolookmode();
+    }
+});
+
+document.getElementById("saveCoin").addEventListener("click", async function () {
+    hide("savemenu");
+    hide("logout");
     hide("cursor"); 
-    console.log("action: " + func + " with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + postogo + " " + coltogo );
+    lookmode    = false;
+    editmode    = false;
+    urlcommand  = document.getElementById("url").value; 
+    for (var i=0; i<markedcol.length; i++ ) { markedcol[i] = markedcol[i] + "|" + urlcommand; } 
+    func = "paintCoin"; 
+    console.log("action: " + func + " with cost: " + parseInt(pricecommand*(100+masterfee)/100) + " " + markedpos + " " + markedcol );
     const ABI = [ 
         {   inputs: [
                 { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
                 { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
-            name: "paint10", outputs: [], stateMutability: "payable", type: "function" },
-            { inputs: [
-                { internalType: "uint256[]", name: "_pos", type: "uint256[]" },
-                { internalType: "string[]", name: "_colorurl", type: "string[]" } ],
-            name: "paint40", outputs: [], stateMutability: "payable", type: "function" } ];
+            name: "paintCoin", outputs: [], stateMutability: "payable", type: "function" } ];
     
     const options = {
         contractAddress: contract,
         functionName: func,
         abi: ABI,
         params: {
-          _pos: postogo,
-          _colorurl: coltogo
+          _pos: markedpos,
+          _colorurl: markedcol
         },
         msgValue: parseInt(pricecommand*(100+masterfee)/100),
     };
@@ -462,8 +543,8 @@ document.getElementById("save").addEventListener("click", async function () {
         console.log(JSON.stringify(paintresult));
         console.log("metamask confirmed transactionHash: " + paintresult['transactionHash']);
         message("successful painting"); 
-        for (var i=0; i<markedpos.length; i++ ) { await createLoggs(markedpos[i], paintresult['transactionHash']); }
-        await updatePixels(markedpos);
+        //for (var i=0; i<markedpos.length; i++ ) { await createLoggs(markedpos[i], paintresult['transactionHash']); }
+        //await updatePixels(markedpos);
         drawBoard();
         loggerIn();
     }
@@ -473,6 +554,7 @@ document.getElementById("save").addEventListener("click", async function () {
     }
     tolookmode();
 });
+
 function refresh() {
     console.log("refreshed"); 
     tolookmode();
@@ -482,9 +564,9 @@ function refresh() {
 }
 document.getElementById("refresh").onclick = refresh;
 
-async function loggerIn () {    
+async function loggerIn() {    
     user = await Moralis.User.current();
-    //console.log("user=" + user.get("ethAddress"));
+    console.log("(loggerIn): user=" + user.get("ethAddress"));
     if (isUndefined(user)) { toLoggedOut(); }
     else { toLoggedIn(); }
 }
