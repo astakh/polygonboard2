@@ -43,7 +43,7 @@ export function toBNB(b) {
         s = '0'.repeat(19-s.length) + s;
         s = s.substring(0, s.length-18) + "." + s.substring(s.length-18); }
     let nn = parseFloat(s);
-    return nn.toString() + 'BNB';
+    return nn.toString();
 }
 export function toBNB3(b) {
     let s = String(b);

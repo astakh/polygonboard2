@@ -1,17 +1,14 @@
 {
-  "name": "bsctest",
-  "version": "0.2.0",
+  "name": "polygonboard",
+  "version": "1.0.0",
   "description": "",
-  "author": "me",
+  "author": "astakh",
   "engines": {
     "node": "16.13.0",
-    "npm": "8.1.0"
-  },
-  
+    "npm": "8.1.0" },
   "scripts": {
     "build": "webpack",
-    "start": "http-server ./ -p 8000"
-  },
+    "start": "http-server ./ -p 8000" },
   "dependencies": {
     "http-server": "^0.12.1",
     "moralis": "^0.0.176",

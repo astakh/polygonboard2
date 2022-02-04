@@ -1,4 +1,6 @@
 package-lock.json
+packageLocal.json
+packageWWW.json
 node_modules/
 dist/
 oldies/

@@ -95,7 +95,7 @@ document.getElementById("loggs").addEventListener("click", async function() {
     console.log("loggs for user " + user.get("ethAddress"));
     let loggs = await getLoggs(user.get("ethAddress"));
     let cont  = "Your transactions:<br><br><table>";
-    cont += '<tr align=center><td>transaction</td><td>time</td><td>pixel position</td><td >-/+ BNB</td></tr>';
+    cont += '<tr align=center><td>transaction</td><td>time</td><td>position</td><td >-/+</td><td >currancy</td></tr>';
     for (var i=0; i<loggs.length; i++) {
         cont += '<tr><td><a href="https://mumbai.polygonscan.com/tx/' + loggs[i][1] + '">trx</a></td>';
         let date = loggs[i][0];
@@ -103,6 +103,7 @@ document.getElementById("loggs").addEventListener("click", async function() {
         cont += '<td align=center>' + xp(loggs[i][2]) + "|" + yp(loggs[i][2]) + '</td>';
         if (loggs[i][3] > 0) { cont += "<td align=right>-" + toBNB3(loggs[i][3]) + "</td>"; } 
         if (loggs[i][4] > 0) { cont += "<td align=right>" + toBNB3(loggs[i][4]) + "</td>"; } 
+        if (loggs[i][5] == 'token') { cont += '<td >' + tokenName + '</td>'; } else { cont += '<td >' + coinName + '</td>'; }
         cont += "</tr>";
     }
     cont += "</table>"
@@ -219,7 +220,8 @@ async function getLoggs(adr) {
     let logdata = [];
     for (var i=0; i<loggs.length; i++) {
         let p = loggs[i];
-        logdata.push([p.get('createdAt'), p.get('trx'), p.get('pos'), p.get('bought'), p.get('sold')]);
+        //if (p.get('cointoken') == 'token') {let rrr = tokenName; } else { let loggcurr = coinName; }
+        logdata.push([p.get('createdAt'), p.get('trx'), p.get('pos'), p.get('bought'), p.get('sold'), p.get('cointoken')]);
     }
     return logdata;
 }
