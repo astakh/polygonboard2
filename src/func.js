@@ -1,11 +1,10 @@
 export function hide(el) { document.getElementById(el).style.visibility = "hidden"; };
-export function show(el) { document.getElementById(el).style.visibility = "visible"; };
-export function xp(pos) { return (pos-1) % global.xs; }
-export function yp(pos) { return parseInt((pos-1-((pos-1) % global.xs)) / global.xs); } 
+export function show(el) { document.getElementById(el).style.visibility = "visible"; }; 
 export function message(m) { document.getElementById("message").innerHTML = m; } 
-export function topaintmode() {
-    global.editmode     = true; 
-    global.lookmode     = false;
+export function toPaintMode() {
+    editMode    = true; 
+    lookMode    = false;
+    screenMode  = false;
     document.getElementById("loggdata").innerHTML = '';
     hide("edit"); 
     hide("cursor");
@@ -13,22 +12,23 @@ export function topaintmode() {
     hide("loggdata");
     hide("loggs");
 }
-export function tolookmode() {
-    global.editmode    = false; 
-    global.screenmode  = false;
-    global.lookmode    = true;
+export function toLookMode() {
+    editMode    = false; 
+    screenMode  = false;
+    lookMode    = true;
     document.getElementById("loggdata").innerHTML = '';
     show("edit");
     show("refresh"); 
     hide("savemenu");
+    hide("color");
     hide("cursor");
     hide("loggdata");
     show("board"); 
 }
-export function tologgmode() {
-    global.editmode    = false; 
-    global.screenmode  = false;
-    global.lookmode    = false;
+export function toLoggMode() {
+    editMode    = false; 
+    screenMode  = false;
+    lookMode    = false;
     hide("edit");
     show("refresh");
     hide("savemenu");
@@ -61,10 +61,24 @@ export function toLoggedOut() {
     hide("logout");
     hide("loggs");
 }
-export function getBoardCoords() {
-    let piccoords = document.getElementById("board").getBoundingClientRect();
-    global.picx = piccoords.left;
-    global.picy = piccoords.top; 
-    global.picw = piccoords.width;
-    global.pich = piccoords.height; 
+export function getBoardCoords(eX, eY) {
+    let boardCoords = document.getElementById("board").getBoundingClientRect();
+    brdX = boardCoords.left;
+    brdY = boardCoords.top; 
+    brdW = boardCoords.width;
+    brdH = boardCoords.height; 
+    crsX    = parseInt(Math.min(Math.max(eX - crsSize/2*brdPixSize, brdX), brdX + brdW - crsSize*brdPixSize));
+    crsY    = parseInt(Math.min(Math.max(eY - crsSize/2*brdPixSize, brdY), brdY + brdH - crsSize*brdPixSize));
+    console.log("cursor coords: " + crsX + "|" + crsY);
+    crsPixX = parseInt((crsX - brdX) / brdPixSize + 1);
+    crsPixY = parseInt((crsY - brdY) / brdPixSize + 2);
+    console.log("cursor pix position: " + crsPixX + "|" + crsPixY);
+    let saveMenuCoords = document.getElementById("savemenu").getBoundingClientRect();
+    if (crsY > (brdHeight*brdPixSize - saveMenuCoords.height)) {svmY = crsY - saveMenuCoords.height; } else {svmY = crsY + crsSize*brdPixSize + 2; }
+    if (crsX > (brdWidth*brdPixSize - saveMenuCoords.width)) {svmX = crsX - saveMenuCoords.width; } else {svmX = crsX + crsSize*brdPixSize + 2; }
+    if (svmY < brdY) { svmY = brdY; }
+    console.log("savemenu coords: " + svmX + "|" + svmY);
+    document.getElementById("savemenu").style.left = svmX + "px";
+    document.getElementById("savemenu").style.top  = svmY + "px";
+
 }

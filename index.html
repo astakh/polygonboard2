@@ -145,8 +145,11 @@
                 </div>
                 <div id="savemenu" class="savemenu-box" >
                     <h3 style="text-align: center;">Enter url:</h3> <input id="url" type="text" style="padding: 5px;" ><br>
-                    <canvas id="screen" width="100" height="100" oncontextmenu="return false;"  style="border: rgb(255, 255, 255); align-items: center; margin: 5px; display: block; margin-left: auto; margin-right: auto;" ></canvas>
-                    <div style="align-self: center;">choose color: <input id="color" type="color" style="margin: 2px;" value="#FF0000"></div>
+                    <canvas id="screen" oncontextmenu="return false;"  style="border: rgb(255, 255, 255); align-items: center; margin: 5px; display: block; margin-left: auto; margin-right: auto;" ></canvas>
+                    <div >choose color: 
+                        <input id="color" type="color" style="margin: 1px;" >
+                        <button id="pipette" >Pipette</button>
+                    </div>
                     <div>
                         <button id="saveToken" class="button4">Pay with BRD</button>
                         <button id="saveCoin" class="button4">Pay with MATIC</button>

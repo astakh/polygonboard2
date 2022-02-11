@@ -4,3 +4,4 @@ packageWWW.json
 node_modules/
 dist/
 oldies/
+.vscode/

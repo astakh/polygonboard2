@@ -1,14 +1,15 @@
 {
-  "name": "polygonboard",
+  "name": "polygonboardNFT",
   "version": "1.0.0",
-  "description": "",
   "author": "astakh",
   "engines": {
     "node": "16.13.0",
-    "npm": "8.1.0" },
+    "npm": "8.1.0"
+  },
   "scripts": {
     "build": "webpack",
-    "start": "http-server ./ -p 8000" },
+    "start": "http-server ./ -p 8000"
+  },
   "dependencies": {
     "http-server": "^0.12.1",
     "moralis": "^0.0.176",
@@ -20,5 +21,17 @@
     "webpack-cli": "^3.3.10",
     "moralis": "^0.0.176",
     "webpack": "*"
-  }
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/astakh/PolygonBoard.git"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/astakh/PolygonBoard/issues"
+  },
+  "homepage": "https://github.com/astakh/PolygonBoard#readme",
+  "description": ""
 }
